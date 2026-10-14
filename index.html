@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐾 신비한 동물 키우기 - 퍼펙트 에디션</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: linear-gradient(135deg, #a8edd9 0%, #fed6e3 100%);
+            margin: 0; padding: 12px; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .game-container {
+            background: rgba(255, 255, 255, 0.96); border-radius: 24px; padding: 18px;
+            width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+            text-align: center; position: relative;
+        }
+        h1 { margin: 0 0 2px; font-size: 21px; color: #1e293b; }
+        .subtitle { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+
+        /* 메인 장착 정보 & 피버 */
+        .active-card {
+            background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 20px;
+            padding: 12px; margin-bottom: 10px; position: relative; transition: all 0.3s ease;
+        }
+        .active-card.fever-mode {
+            background: linear-gradient(135deg, #fff7ed, #fef3c7);
+            border-color: #f59e0b; animation: feverGlow 0.8s infinite alternate;
+        }
+        @keyframes feverGlow {
+            0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+            100% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.9); }
+        }
+
+        .title-badge { display: inline-block; background: #3b82f6; color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 8px; }
+        .badge { display: inline-block; padding: 2px 7px; font-size: 10px; font-weight: 800; border-radius: 12px; color: #fff; }
+        .shiny-tag { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; }
+
+        /* 피버 게이지 */
+        .fever-bar-container { width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; margin: 6px 0 4px; overflow: hidden; }
+        .fever-bar-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); width: 0%; transition: width 0.1s linear; }
+
+        /* 메인 클릭 영역 */
+        .click-area { position: relative; margin: 4px 0; cursor: pointer; height: 95px; display: flex; justify-content: center; align-items: center; }
+        .animal-icon { font-size: 72px; transition: transform 0.08s ease; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.15)); }
+        .click-area:active .animal-icon { transform: scale(0.88); }
+        
+        .floating-text {
+            position: absolute; font-weight: 800; font-size: 16px; color: #2563eb; pointer-events: none;
+            animation: floatUp 0.7s ease-out forwards; text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+        }
+        .floating-text.crit { color: #dc2626; font-size: 21px; }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-38px) scale(1.15); }
+        }
+
+        /* 다중 서브 수익 클릭 버튼 패널 */
+        .extra-buttons-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 6px; }
+        .sub-click-btn { padding: 8px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; cursor: pointer; font-weight: 800; font-size: 10px; color: #1e293b; transition: all 0.1s; }
+        .sub-click-btn:active { transform: scale(0.95); background: #eff6ff; }
+        .sub-click-btn.locked { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; opacity: 0.6; }
+
+        /* 재화 표시 */
+        .stats { background: #f1f5f9; padding: 8px 12px; border-radius: 14px; margin-bottom: 10px; }
+        .stat-item { font-size: 11px; color: #64748b; }
+        .stat-highlight { font-weight: 800; font-size: 19px; color: #2563eb; }
+        .gem-highlight { font-weight: 800; font-size: 17px; color: #7c3aed; margin-left: 8px; }
+
+        /* 메인 탭 */
+        .tab-buttons { display: flex; gap: 3px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; }
+        .tab-btn {
+            flex: 1; min-width: 48px; padding: 6px 0; border: none; background: #e2e8f0;
+            color: #64748b; font-weight: 700; font-size: 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+        }
+        .tab-btn.active { background: #2563eb; color: #ffffff; box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); }
+
+        /* 탭 콘텐츠 */
+        .tab-content { display: none; max-height: 280px; overflow-y: auto; padding-right: 3px; }
+        .tab-content.active { display: block; }
+        .tab-content::-webkit-scrollbar { width: 4px; }
+        .tab-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* 공통 리스트 컴포넌트 */
+        .card-item { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .action-btn { background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; }
+        .action-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* 환생 섹션 */
+        .rebirth-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid #f97316; border-radius: 14px; padding: 12px; text-align: left; }
+        .rebirth-title { font-size: 15px; font-weight: 800; color: #c2410c; margin-bottom: 4px; }
+        .rebirth-desc { font-size: 11px; color: #9a3412; line-height: 1.4; margin-bottom: 8px; }
+        .rebirth-info-list { font-size: 11px; color: #431407; background: #ffffff; padding: 8px; border-radius: 8px; margin-bottom: 8px; }
+
+        /* 서브 탭 (퀘스트) */
+        .sub-tab-group { display: flex; gap: 4px; margin-bottom: 8px; }
+        .sub-tab-btn { flex: 1; padding: 5px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; color: #475569; }
+        .sub-tab-btn.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+
+        /* 칭호 리스트 */
+        .title-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .title-card.equipped { border-color: #2563eb; background: #eff6ff; }
+        .title-card.locked { opacity: 0.5; background: #f8fafc; }
+
+        /* 도감 */
+        .book-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .book-item { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 4px; text-align: center; cursor: pointer; }
+        .book-item.locked { opacity: 0.5; filter: grayscale(1); background: #f8fafc; }
+        .book-item.equipped { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.3); }
+
+        /* 보스전 */
+        .boss-box { background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 10px; text-align: center; }
+        .boss-hp-bar { width: 100%; background: #fee2e2; height: 14px; border-radius: 7px; overflow: hidden; margin: 6px 0; }
+        .boss-hp-fill { height: 100%; background: #ef4444; width: 100%; transition: width 0.1s; }
+
+        /* 모달 */
+        .modal { display: none; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); border-radius: 24px; z-index: 100; justify-content: center; align-items: center; padding: 16px; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 16px; padding: 16px; width: 100%; max-height: 90%; overflow-y: auto; text-align: center; }
+        .close-btn { background: #1e293b; color: white; border: none; padding: 8px 20px; border-radius: 10px; font-weight: 700; width: 100%; cursor: pointer; margin-top: 10px; }
+
+        .reset-btn { margin-top: 8px; background: transparent; border: none; color: #94a3b8; font-size: 10px; cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>🐾 신비한 동물 키우기</h1>
+        <div class="subtitle">환생 · 유물 · 보스전 · 원정대 · 샤이니 합성 완벽 통합판</div>
+
+        <!-- 메인 정보 카드 -->
+        <div class="active-card" id="activeCard">
+            <div>
+                <span class="title-badge" id="activeTitleBadge">칭호 없음</span>
+                <span class="badge" id="activeBadge">기본</span>
+                <span class="shiny-tag" id="activeShinyTag" style="display:none;">✨ SHINY (3x)</span>
+            </div>
+            <div style="font-size: 17px; font-weight: 800; margin-top: 2px;" id="activeName">병아리</div>
+
+            <!-- 피버 게이지 바 -->
+            <div class="fever-bar-container">
+                <div class="fever-bar-fill" id="feverBarFill"></div>
+            </div>
+            <div style="font-size: 9px; font-weight: 700; color: #d97706;" id="feverText">🔥 피버 게이지 (0%)</div>
+
+            <div class="click-area" id="clickArea">
+                <div class="animal-icon" id="activeIcon">🐥</div>
+            </div>
+
+            <!-- 다중 서브 수익 클릭 버튼 패널 -->
+            <div class="extra-buttons-panel" id="extraButtonsPanel"></div>
+        </div>
+
+        <!-- 재화 표시 -->
+        <div class="stats">
+            <div>
+                💰 <span class="stat-highlight" id="goldDisplay">0 G</span>
+                💎 <span class="gem-highlight" id="gemDisplay">0</span>
+            </div>
+            <div class="stat-item" style="margin-top: 3px;">
+                클릭: <b id="cpcDisplay">1</b> G | 초당: <b id="cpsDisplay">0</b> G
+            </div>
+            <div class="stat-item" style="margin-top: 2px; font-weight: 700;">
+                🔄 환생: <span id="rebirthCountDisplay" style="color:#ea580c;">0회</span> | 
+                도감: <span id="collectionDisplay" style="color:#2563eb;">1/100</span> | 
+                칭호: <span id="titleCountDisplay" style="color:#9333ea;">0/70</span>
+            </div>
+        </div>
+
+        <!-- 메인 탭 -->
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="switchTab('shop')">🏪상점</button>
+            <button class="tab-btn" onclick="switchTab('boss')">⚔️보스</button>
+            <button class="tab-btn" onclick="switchTab('artifact')">💎유물</button>
+            <button class="tab-btn" onclick="switchTab('expedition')">🗺️원정대</button>
+            <button class="tab-btn" onclick="switchTab('gacha')">🎰뽑기/합성</button>
+            <button class="tab-btn" onclick="switchTab('rebirth')">🔄환생</button>
+            <button class="tab-btn" onclick="switchTab('quest')">📜퀘스트</button>
+            <button class="tab-btn" onclick="switchTab('title')">🎖️칭호</button>
+            <button class="tab-btn" onclick="switchTab('book')">📖도감</button>
+        </div>
+
+        <!-- 1. 상점 -->
+        <div class="tab-content active" id="tabShop">
+            <div class="card-item">
+                <div>
+                    <div style="font-weight:700; font-size:12px;">손가락 단련</div>
+                    <div style="font-size:10px; color:#64748b;">기본 클릭 수익 +1</div>
+                </div>
+                <button class="action-btn" id="btnClickPower" onclick="buyClickPower()">10 G</button>
+            </div>
+            <div class="card-item">
+                <div>
+                    <div style="font-weight:700; font-size:12px;">자동 먹이주기</div>
+                    <div style="font-size:10px; color:#64748b;">기본 초당 수익 +1</div>
+                </div>
+                <button class="action-btn" id="btnAutoClicker" onclick="buyAutoClicker()">50 G</button>
+            </div>
+        </div>
+
+        <!-- 2. 보스전 -->
+        <div class="tab-content" id="tabBoss">
+            <div class="boss-box">
+                <div style="font-weight:800; color:#dc2626; font-size:15px;" id="bossName">👹 보스 Stage 1</div>
+                <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div>
+                <div style="font-size:11px; font-weight:700;" id="bossHpText">HP: 1,000 / 1,000</div>
+                <div style="font-size:11px; color:#991b1b; margin-top:2px;" id="bossTimerText">⏳ 제한시간: 30초</div>
+                <button class="action-btn" style="width:100%; margin-top:6px; background:#dc2626;" id="btnBossAction" onclick="handleBossAction()">⚔️ 보스 도전하기</button>
+            </div>
+        </div>
+
+        <!-- 3. 유물 -->
+        <div class="tab-content" id="tabArtifact">
+            <div id="artifactList"></div>
+        </div>
+
+        <!-- 4. 원정대 -->
+        <div class="tab-content" id="tabExpedition">
+            <div style="font-size:10px; color:#64748b; margin-bottom:6px;">동물을 탐험 보내 보석과 골드를 획득하세요!</div>
+            <div id="expeditionSlotList"></div>
+        </div>
+
+        <!-- 5. 뽑기 및 합성 -->
+        <div class="tab-content" id="tabGacha">
+            <div style="background:#faf5ff; border:1px dashed #c084fc; padding:10px; border-radius:12px; text-align:center; margin-bottom:8px;">
+                <div style="font-size: 14px; font-weight: 800; color: #7e22ce;">✨ 수호수 가챠</div>
+                <div style="font-size: 10px; color: #6b21a8; margin-top: 2px;" id="gachaUnlockStatus">최고 등급: [희귀] | ✨ 샤이니 확률: 5%</div>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button class="action-btn" style="flex:1;" id="btnGacha1" onclick="drawGacha(1)">1회 뽑기</button>
+                    <button class="action-btn" style="flex:1;" id="btnGacha10" onclick="drawGacha(10)">10회 뽑기</button>
+                </div>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #86efac; padding:10px; border-radius:12px;">
+                <div style="font-weight:800; color:#166534; font-size:12px;">🧬 동일 등급 3마리 합성</div>
+                <div style="font-size:10px; color:#15803d; margin-bottom:6px;">소유한 동물을 3마리 바쳐 한 단계 상위 동물을 연성합니다.</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap;" id="fusionButtons"></div>
+            </div>
+        </div>
+
+        <!-- 6. 환생 -->
+        <div class="tab-content" id="tabRebirth">
+            <div class="rebirth-box">
+                <div class="rebirth-title">🔄 동물의 영혼 환생</div>
+                <div class="rebirth-desc">환생하여 **전역 수익 배율**을 올리고, **새 수익 버튼**과 **상위 뽑기 등급**을 해금하세요!</div>
+                <div class="rebirth-info-list" id="rebirthInfoList"></div>
+                <button class="action-btn" style="width:100%; background:#ea580c; padding:10px;" id="btnDoRebirth" onclick="doRebirth()">환생 진행</button>
+            </div>
+        </div>
+
+        <!-- 7. 퀘스트 (체계적 3개 서브탭 유지) -->
+        <div class="tab-content" id="tabQuest">
+            <div class="sub-tab-group">
+                <button class="sub-tab-btn active" id="qSubMain" onclick="switchQuestSub('main')">중요 (0/30)</button>
+                <button class="sub-tab-btn" id="qSubLegend" onclick="switchQuestSub('legend')">전설 (0/30)</button>
+                <button class="sub-tab-btn" id="qSubMyth" onclick="switchQuestSub('myth')">신화 (0/30)</button>
+            </div>
+            <div id="questList"></div>
+        </div>
+
+        <!-- 8. 칭호 (고유 70종 세부 조건 유지) -->
+        <div class="tab-content" id="tabTitle">
+            <div id="titleList"></div>
+        </div>
+
+        <!-- 9. 도감 -->
+        <div class="tab-content" id="tabBook">
+            <div class="book-grid" id="bookGrid"></div>
+        </div>
+
+        <button class="reset-btn" onclick="resetGame()">게임 초기화</button>
+    </div>
+
+    <!-- 범용 모달 -->
+    <div class="modal" id="gameModal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 8px; font-size: 16px;" id="modalTitle">알림</h3>
+            <div id="modalBody" style="font-size:12px; margin: 10px 0;"></div>
+            <button class="close-btn" onclick="closeModal()">확인</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 재화 단위 변환 (만, 억, 조, 경, 해) ---
+        function formatGold(num) {
+            if (num < 10000) return Math.floor(num).toLocaleString() + " G";
+            const units = ["", "만", "억", "조", "경", "해"];
+            let idx = 0, val = num;
+            while (val >= 10000 && idx < units.length - 1) { val /= 10000; idx++; }
+            return (Math.floor(val * 100) / 100).toLocaleString() + " " + units[idx] + " G";
+        }
+
+        // --- 2. 등급 및 동물 데이터 ---
+        const RANKS = {
+            "기본": { name: "기본", color: "#64748b", bonus: 1, minRebirth: 0, chance: 50.0 },
+            "희귀": { name: "희귀", color: "#16a34a", bonus: 2, minRebirth: 0, chance: 25.0 },
+            "초희귀": { name: "초희귀", color: "#2563eb", bonus: 5, minRebirth: 1, chance: 12.0 },
+            "영웅": { name: "영웅", color: "#9333ea", bonus: 12, minRebirth: 2, chance: 7.0 },
+            "신화": { name: "신화", color: "#dc2626", bonus: 30, minRebirth: 3, chance: 4.0 },
+            "전설": { name: "전설", color: "#d97706", bonus: 100, minRebirth: 4, chance: 1.8 },
+            "미스틱": { name: "미스틱", color: "#7c3aed", bonus: 500, minRebirth: 5, chance: 0.2 }
+        };
+
+        const RANK_ORDER = ["기본", "희귀", "초희귀", "영웅", "신화", "전설", "미스틱"];
+
+        const ANIMALS = [
+            { id: 1, name: "병아리", icon: "🐥", rank: "기본" }, { id: 2, name: "아기 고양이", icon: "🐱", rank: "기본" },
+            { id: 3, name: "아기 생쥐", icon: "🐭", rank: "기본" }, { id: 4, name: "햄스터", icon: "🐹", rank: "기본" },
+            { id: 5, name: "토끼", icon: "🐰", rank: "기본" }, { id: 6, name: "시골 여우", icon: "🦊", rank: "기본" },
+            { id: 7, name: "아기 곰", icon: "🐻", rank: "기본" }, { id: 8, name: "아기 판다", icon: "🐼", rank: "기본" },
+            { id: 9, name: "코알라", icon: "🐨", rank: "기본" }, { id: 10, name: "아기 호랑이", icon: "🐯", rank: "기본" },
+            { id: 11, name: "아기 사자", icon: "🦁", rank: "기본" }, { id: 12, name: "얼룩소", icon: "🐮", rank: "기본" },
+            { id: 13, name: "꿀돼지", icon: "🐷", rank: "기본" }, { id: 14, name: "청개구리", icon: "🐸", rank: "기본" },
+            { id: 15, name: "아기 원숭이", icon: "🐵", rank: "기본" }, { id: 16, name: "암탉", icon: "🐔", rank: "기본" },
+            { id: 17, name: "펭귄", icon: "🐧", rank: "기본" }, { id: 18, name: "참새", icon: "🐦", rank: "기본" },
+            { id: 19, name: "노란 오리", icon: "🐤", rank: "기본" }, { id: 20, name: "청둥오리", icon: "🦆", rank: "기본" },
+            { id: 21, name: "매", icon: "🦅", rank: "기본" }, { id: 22, name: "부엉이", icon: "🦉", rank: "기본" },
+            { id: 23, name: "박쥐", icon: "🦇", rank: "기본" }, { id: 24, name: "들개", icon: "🐺", rank: "기본" },
+            { id: 25, name: "멧돼지", icon: "🐗", rank: "기본" }, { id: 26, name: "망아지", icon: "🐴", rank: "기본" },
+            { id: 27, name: "아기 유니콘", icon: "🦄", rank: "기본" }, { id: 28, name: "꿀벌", icon: "🐝", rank: "기본" },
+            { id: 29, name: "애벌레", icon: "🐛", rank: "기본" }, { id: 30, name: "나비", icon: "🦋", rank: "기본" },
+            { id: 31, name: "사막여우", icon: "🦊", rank: "희귀" }, { id: 32, name: "너구리", icon: "🦝", rank: "희귀" },
+            { id: 33, name: "스컹크", icon: "🦨", rank: "희귀" }, { id: 34, name: "오소리", icon: "🦡", rank: "희귀" },
+            { id: 35, name: "수달", icon: "🦦", rank: "희귀" }, { id: 36, name: "나무늘보", icon: "🦥", rank: "희귀" },
+            { id: 37, name: "고슴도치", icon: "🦔", rank: "희귀" }, { id: 38, name: "다람쥐", icon: "🐿️", rank: "희귀" },
+            { id: 39, name: "꽃사슴", icon: "🦌", rank: "희귀" }, { id: 40, name: "라마", icon: "🦙", rank: "희귀" },
+            { id: 41, name: "낙타", icon: "🐫", rank: "희귀" }, { id: 42, name: "기린", icon: "🦒", rank: "희귀" },
+            { id: 43, name: "코끼리", icon: "🐘", rank: "희귀" }, { id: 44, name: "코뿔소", icon: "🦏", rank: "희귀" },
+            { id: 45, name: "하마", icon: "🦛", rank: "희귀" }, { id: 46, name: "표범", icon: "🐆", rank: "희귀" },
+            { id: 47, name: "악어", icon: "🐊", rank: "희귀" }, { id: 48, name: "바다거북", icon: "🐢", rank: "희귀" },
+            { id: 49, name: "사막뱀", icon: "🐍", rank: "희귀" }, { id: 50, name: "카멜레온", icon: "🦎", rank: "희귀" },
+            { id: 51, name: "돌고래", icon: "🐬", rank: "희귀" }, { id: 52, name: "혹등고래", icon: "🐳", rank: "희귀" },
+            { id: 53, name: "물개", icon: "🦭", rank: "희귀" }, { id: 54, name: "홍학", icon: "🦩", rank: "희귀" },
+            { id: 55, name: "공작", icon: "🦚", rank: "희귀" },
+            { id: 56, name: "백상아리", icon: "🦈", rank: "초희귀" }, { id: 57, name: "대왕문어", icon: "🐙", rank: "초희귀" },
+            { id: 58, name: "대왕오징어", icon: "🦑", rank: "초희귀" }, { id: 59, name: "킹랍스터", icon: "🦞", rank: "초희귀" },
+            { id: 60, name: "왕게", icon: "🦀", rank: "초희귀" }, { id: 61, name: "전갈", icon: "🦂", rank: "초희귀" },
+            { id: 62, name: "타란툴라", icon: "🕷️", rank: "초희귀" }, { id: 63, name: "흰머리수리", icon: "🦅", rank: "초희귀" },
+            { id: 64, name: "무지개 앵무새", icon: "🦜", rank: "초희귀" }, { id: 65, name: "백조", icon: "🦢", rank: "초희귀" },
+            { id: 66, name: "도도새", icon: "🦤", rank: "초희귀" }, { id: 67, name: "붉은 캥거루", icon: "🦘", rank: "초희귀" },
+            { id: 68, name: "야생 들소", icon: "🦬", rank: "초희귀" }, { id: 69, name: "산양", icon: "🐐", rank: "초희귀" },
+            { id: 70, name: "알파카", icon: "🦙", rank: "초희귀" }, { id: 71, name: "분홍 하마", icon: "🦛", rank: "초희귀" },
+            { id: 72, name: "설원 백호", icon: "🐅", rank: "초희귀" }, { id: 73, name: "심해 흑표범", icon: "🐆", rank: "초희귀" },
+            { id: 74, name: "대왕 흰수염고래", icon: "🐋", rank: "초희귀" }, { id: 75, name: "황금 코뿔소", icon: "🦏", rank: "초희귀" },
+            { id: 76, name: "볼케노 라이온", icon: "🦁", rank: "영웅" }, { id: 77, name: "프로스트 울프", icon: "🐺", rank: "영웅" },
+            { id: 78, name: "볼트 이글", icon: "🦅", rank: "영웅" }, { id: 79, name: "윈드 오울", icon: "🦉", rank: "영웅" },
+            { id: 80, name: "청룡 수호수", icon: "🐉", rank: "영웅" }, { id: 81, name: "주작 불꽃새", icon: "🐦", rank: "영웅" },
+            { id: 82, name: "백호의 왕", icon: "🐅", rank: "영웅" }, { id: 83, name: "현무 가디언", icon: "🐢", rank: "영웅" },
+            { id: 84, name: "성스러운 페가수스", icon: "🦄", rank: "영웅" }, { id: 85, name: "달빛 은빛늑대", icon: "🐺", rank: "영웅" },
+            { id: 86, name: "기간틱 베어", icon: "🐻", rank: "영웅" }, { id: 87, name: "네뷸라 피닉스", icon: "🦚", rank: "영웅" },
+            { id: 88, name: "다크니스 드래곤", icon: "🐉", rank: "신화" }, { id: 89, name: "영원의 불사조", icon: "🔥", rank: "신화" },
+            { id: 90, name: "천상의 알리콘", icon: "🦄", rank: "신화" }, { id: 91, name: "심연의 크라켄", icon: "🐙", rank: "신화" },
+            { id: 92, name: "대해양 리바이어던", icon: "🐋", rank: "신화" }, { id: 93, name: "지옥의 키메라", icon: "🦁", rank: "신화" },
+            { id: 94, name: "하늘의 그리핀", icon: "🦅", rank: "신화" }, { id: 95, name: "종말의 펜리르", icon: "🐺", rank: "신화" },
+            { id: 96, name: "태초의 창조신룡", icon: "🐲", rank: "전설" }, { id: 97, name: "파멸의 파괴룡", icon: "🐉", rank: "전설" },
+            { id: 98, name: "은하수 크라켄", icon: "🌌", rank: "전설" }, { id: 99, name: "태양의 레비아탄", icon: "☀️", rank: "전설" },
+            { id: 100, name: "우주의 근원 창조 신수", icon: "🌠", rank: "미스틱" }
+        ];
+
+        const EXTRA_CLICK_BUTTONS = [
+            { id: 1, name: "⚡ 광속 터치", reqRebirth: 1, mult: 5 },
+            { id: 2, name: "🔥 폭발 터치", reqRebirth: 2, mult: 25 },
+            { id: 3, name: "🌌 우주 파동", reqRebirth: 3, mult: 100 },
+            { id: 4, name: "💎 신의 터치", reqRebirth: 4, mult: 500 }
+        ];
+
+        const ARTIFACTS = [
+            { id: "art1", name: "🎰 황금 알 둥지", desc: "가챠 비용 할인 (Lv당 -5%, 최대 50%)", maxLv: 10, baseCost: 10 },
+            { id: "art2", name: "✨ 행운의 부적", desc: "샤이니 등장 확률 증가 (Lv당 +2%)", maxLv: 10, baseCost: 15 },
+            { id: "art3", name: "🎯 크리티컬 돋보기", desc: "클릭 크리티컬(10배) 확률 (Lv당 +5%)", maxLv: 10, baseCost: 20 },
+            { id: "art4", name: "📜 고대의 계약", desc: "전역 골드 수익 배율 (Lv당 +50%)", maxLv: 20, baseCost: 25 },
+            { id: "art5", name: "⚔️ 영웅의 인장", desc: "보스전 공격력 증가 (Lv당 +100%)", maxLv: 20, baseCost: 30 }
+        ];
+
+        // 프로그램 1의 고유 70종 칭호 체계 그대로 보존
+        const TITLES = [
+            { id: "t1", name: "초보 자산가", desc: "보유 금액 1만 G 달성", bonus: 0.05, check: g => g.gold >= 10000 },
+            { id: "t2", name: "백만장자", desc: "보유 금액 100만 G 달성", bonus: 0.10, check: g => g.gold >= 1000000 },
+            { id: "t3", name: "억만장자", desc: "보유 금액 1억 G 달성", bonus: 0.15, check: g => g.gold >= 100000000 },
+            { id: "t4", name: "백억 자산가", desc: "보유 금액 100억 G 달성", bonus: 0.20, check: g => g.gold >= 10000000000 },
+            { id: "t5", name: "조 단위 신화", desc: "보유 금액 1조 G 달성", bonus: 0.30, check: g => g.gold >= 1000000000000 },
+            { id: "t6", name: "백조의 기적", desc: "보유 금액 100조 G 달성", bonus: 0.40, check: g => g.gold >= 100000000000000 },
+            { id: "t7", name: "경이로운 부자", desc: "보유 금액 1경 G 달성", bonus: 0.50, check: g => g.gold >= 10000000000000000 },
+            { id: "t8", name: "백경의 스케일", desc: "보유 금액 100경 G 달성", bonus: 0.70, check: g => g.gold >= 1000000000000000000 },
+            { id: "t9", name: "해탈의 대부호", desc: "보유 금액 1해 G 달성", bonus: 1.00, check: g => g.gold >= 1000000000000000000000 },
+            { id: "t10", name: "우주 최고의 재벌", desc: "보유 금액 100해 G 달성", bonus: 1.50, check: g => g.gold >= 100000000000000000000000 },
+            { id: "t11", name: "희귀한 인연", desc: "희귀 등급 이상 동물 획득", bonus: 0.05, check: g => hasRank("희귀") },
+            { id: "t12", name: "특별한 발견", desc: "초희귀 등급 이상 동물 획득", bonus: 0.10, check: g => hasRank("초희귀") },
+            { id: "t13", name: "영웅의 탄생", desc: "영웅 등급 이상 동물 획득", bonus: 0.15, check: g => hasRank("영웅") },
+            { id: "t14", name: "신화의 동반자", desc: "신화 등급 이상 동물 획득", bonus: 0.25, check: g => hasRank("신화") },
+            { id: "t15", name: "전설의 강림", desc: "전설 등급 이상 동물 획득", bonus: 0.40, check: g => hasRank("전설") },
+            { id: "t16", name: "미스틱 강림", desc: "미스틱 등급 동물 1회 뽑기", bonus: 0.80, check: g => g.mysticPullCount >= 1 },
+            { id: "t17", name: "기적의 더블 미스틱", desc: "미스틱 등급 동물 2회 뽑기 달성!", bonus: 1.50, check: g => g.mysticPullCount >= 2 },
+            { id: "t18", name: "동물원 원장", desc: "동물 10종 수집", bonus: 0.05, check: g => g.unlockedAnimals.length >= 10 },
+            { id: "t19", name: "박물관 관장", desc: "동물 50종 수집", bonus: 0.20, check: g => g.unlockedAnimals.length >= 50 },
+            { id: "t20", name: "동물의 신", desc: "100종 동물 전체 도감 완수", bonus: 2.00, check: g => g.unlockedAnimals.length >= 100 },
+            { id: "t21", name: "중요 임무 해결사", desc: "중요 퀘스트 10개 완료", bonus: 0.05, check: g => getQuestCount("main") >= 10 },
+            { id: "t22", name: "중요 임무 마스터", desc: "중요 퀘스트 30개 모두 완수!", bonus: 0.30, check: g => getQuestCount("main") >= 30 },
+            { id: "t23", name: "전설의 탐험가", desc: "전설 퀘스트 10개 완료", bonus: 0.15, check: g => getQuestCount("legend") >= 10 },
+            { id: "t24", name: "전설 임무 마스터", desc: "전설 퀘스트 30개 모두 완수!", bonus: 0.60, check: g => getQuestCount("legend") >= 30 },
+            { id: "t25", name: "신화의 계승자", desc: "신화 퀘스트 10개 완료", bonus: 0.30, check: g => getQuestCount("myth") >= 10 },
+            { id: "t26", name: "신화 임무 마스터", desc: "신화 퀘스트 30개 모두 완수!", bonus: 1.00, check: g => getQuestCount("myth") >= 30 },
+            { id: "t27", name: "완벽주의자", desc: "총 퀘스트 50개 완료", bonus: 0.50, check: g => g.completedQuests.length >= 50 },
+            { id: "t28", name: "퀘스트의 정점", desc: "총 90개 퀘스트 완벽 정복!", bonus: 2.50, check: g => g.completedQuests.length >= 90 },
+            { id: "t29", name: "첫 환생의 기쁨", desc: "첫 환생 1회 달성", bonus: 0.20, check: g => g.rebirthCount >= 1 },
+            { id: "t30", name: "윤회의 굴레", desc: "환생 3회 달성", bonus: 0.50, check: g => g.rebirthCount >= 3 },
+            { id: "t31", name: "환생의 마스터", desc: "환생 5회 이상 달성", bonus: 1.20, check: g => g.rebirthCount >= 5 },
+            { id: "t32", name: "첫 뽑기의 설렘", desc: "가챠 1회 진행", bonus: 0.02, check: g => g.gachaPulls >= 1 },
+            { id: "t33", name: "뽑기 중독", desc: "가챠 50회 진행", bonus: 0.10, check: g => g.gachaPulls >= 50 },
+            { id: "t34", name: "가챠의 지배자", desc: "가챠 300회 진행", bonus: 0.30, check: g => g.gachaPulls >= 300 },
+            { id: "t35", name: "천장 매니아", desc: "가챠 1,000회 진행", bonus: 0.80, check: g => g.gachaPulls >= 1000 },
+            { id: "t36", name: "성실한 손가락", desc: "클릭 100회 달성", bonus: 0.03, check: g => g.totalClicks >= 100 },
+            { id: "t37", name: "광란의 클릭커", desc: "클릭 1,000회 달성", bonus: 0.10, check: g => g.totalClicks >= 1000 },
+            { id: "t38", name: "빛의 손가락", desc: "클릭 10,000회 달성", bonus: 0.30, check: g => g.totalClicks >= 10000 },
+            { id: "t39", name: "손가락 달인", desc: "손가락 단련 20단계 달성", bonus: 0.05, check: g => g.clickPowerLevel >= 20 },
+            { id: "t40", name: "손가락 마스터", desc: "손가락 단련 100단계 달성", bonus: 0.30, check: g => g.clickPowerLevel >= 100 },
+            { id: "t41", name: "자동화 선구자", desc: "자동 먹이주기 20단계 달성", bonus: 0.05, check: g => g.autoClickerLevel >= 20 },
+            { id: "t42", name: "자동화 제국", desc: "자동 먹이주기 100단계 달성", bonus: 0.30, check: g => g.autoClickerLevel >= 100 },
+            { id: "t43", name: "동물 사랑꾼", desc: "기본 동물 20종 수집", bonus: 0.05, check: g => countRankUnlocked("기본") >= 20 },
+            { id: "t44", name: "희귀 수집가", desc: "희귀 동물 15종 수집", bonus: 0.10, check: g => countRankUnlocked("희귀") >= 15 },
+            { id: "t45", name: "초희귀 마스터", desc: "초희귀 동물 10종 수집", bonus: 0.15, check: g => countRankUnlocked("초희귀") >= 10 },
+            { id: "t46", name: "영웅 군단장", desc: "영웅 동물 5종 수집", bonus: 0.25, check: g => countRankUnlocked("영웅") >= 5 },
+            { id: "t47", name: "신화 수호자", desc: "신화 동물 3종 수집", bonus: 0.40, check: g => countRankUnlocked("신화") >= 3 },
+            { id: "t48", name: "전설의 수집가", desc: "전설 동물 2종 수집", bonus: 0.60, check: g => countRankUnlocked("전설") >= 2 },
+            { id: "t49", name: "알뜰한 모으기", desc: "누적 획득 10만 G", bonus: 0.05, check: g => g.totalGold >= 100000 },
+            { id: "t50", name: "재산가", desc: "누적 획득 1,000만 G", bonus: 0.10, check: g => g.totalGold >= 10000000 },
+            { id: "t51", name: "거물 거상", desc: "누적 획득 10억 G", bonus: 0.20, check: g => g.totalGold >= 1000000000 },
+            { id: "t52", name: "황금 손", desc: "클릭 50,000회 달성", bonus: 0.50, check: g => g.totalClicks >= 50000 },
+            { id: "t53", name: "클릭의 신", desc: "클릭 100,000회 달성", bonus: 1.00, check: g => g.totalClicks >= 100000 },
+            { id: "t54", name: "가챠 광인", desc: "가챠 500회 달성", bonus: 0.50, check: g => g.gachaPulls >= 500 },
+            { id: "t55", name: "초보 단계를 넘어", desc: "모든 기본 등급 동물 수집", bonus: 0.15, check: g => countRankUnlocked("기본") >= 30 },
+            { id: "t56", name: "희귀 정복자", desc: "모든 희귀 등급 동물 수집", bonus: 0.25, check: g => countRankUnlocked("희귀") >= 25 },
+            { id: "t57", name: "초희귀 정복자", desc: "모든 초희귀 등급 동물 수집", bonus: 0.35, check: g => countRankUnlocked("초희귀") >= 20 },
+            { id: "t58", name: "영웅 정복자", desc: "모든 영웅 등급 동물 수집", bonus: 0.50, check: g => countRankUnlocked("영웅") >= 12 },
+            { id: "t59", name: "신화 정복자", desc: "모든 신화 등급 동물 수집", bonus: 0.80, check: g => countRankUnlocked("신화") >= 8 },
+            { id: "t60", name: "전설 정복자", desc: "모든 전설 등급 동물 수집", bonus: 1.20, check: g => countRankUnlocked("전설") >= 4 },
+            { id: "t61", name: "단련의 극한", desc: "손가락 단련 200단계 달성", bonus: 0.50, check: g => g.clickPowerLevel >= 200 },
+            { id: "t62", name: "자동화의 극한", desc: "자동 먹이주기 200단계 달성", bonus: 0.50, check: g => g.autoClickerLevel >= 200 },
+            { id: "t63", name: "만석꾼의 꿈", desc: "보유 금액 1,000조 G 달성", bonus: 0.50, check: g => g.gold >= 1000000000000000 },
+            { id: "t64", name: "경이로운 백경", desc: "보유 금액 10경 G 달성", bonus: 0.60, check: g => g.gold >= 100000000000000000 },
+            { id: "t65", name: "해왕성 거상", desc: "보유 금액 10해 G 달성", bonus: 1.20, check: g => g.gold >= 10000000000000000000000 },
+            { id: "t66", name: "초보 모험가", desc: "퀘스트 5개 완료", bonus: 0.02, check: g => g.completedQuests.length >= 5 },
+            { id: "t67", name: "숙련 모험가", desc: "퀘스트 20개 완료", bonus: 0.10, check: g => g.completedQuests.length >= 20 },
+            { id: "t68", name: "베테랑 모험가", desc: "퀘스트 40개 완료", bonus: 0.30, check: g => g.completedQuests.length >= 40 },
+            { id: "t69", name: "미스틱의 가호", desc: "미스틱 동물 장착 중", bonus: 1.00, check: g => getActiveAnimal().rank === "미스틱" },
+            { id: "t70", name: "우주 창조주", desc: "미스틱 동물을 장착하고 1경 G 보유", bonus: 3.00, check: g => getActiveAnimal().rank === "미스틱" && g.gold >= 10000000000000000 }
+        ];
+
+        // 프로그램 1의 90개 퀘스트 데이터 체계 생성
+        function generateQuests() {
+            const quests = { main: [], legend: [], myth: [] };
+            for (let i = 1; i <= 30; i++) {
+                quests.main.push({
+                    id: `m${i}`, cat: "main", title: `중요 임무 #${i}`,
+                    desc: `클릭 ${i * 20}회 / 골드 ${formatGold(i * 500)} 보유`, rewardGold: i * 300,
+                    check: g => g.totalClicks >= i * 20 && g.gold >= i * 500
+                });
+            }
+            for (let i = 1; i <= 30; i++) {
+                const targetGold = Math.pow(10, 4 + i);
+                quests.legend.push({
+                    id: `l${i}`, cat: "legend", title: `전설 시련 #${i}`,
+                    desc: `가챠 ${i * 10}회 / 골드 ${formatGold(targetGold)} 보유`, rewardGold: targetGold * 0.1,
+                    check: g => g.gachaPulls >= i * 10 && g.gold >= targetGold
+                });
+            }
+            for (let i = 1; i <= 30; i++) {
+                const targetGold = Math.pow(10, 10 + i * 2);
+                quests.myth.push({
+                    id: `my${i}`, cat: "myth", title: `신화 과제 #${i}`,
+                    desc: `도감 ${Math.min(100, 20 + i * 2)}종 / 골드 ${formatGold(targetGold)} 보유`, rewardGold: targetGold * 0.05,
+                    check: g => g.unlockedAnimals.length >= Math.min(100, 20 + i * 2) && g.gold >= targetGold
+                });
+            }
+            return quests;
+        }
+        const ALL_QUESTS = generateQuests();
+
+        // --- 3. 게임 전체 상태 데이터 ---
+        let gameData = {
+            gold: 0, totalGold: 0, gems: 0,
+            baseClickPower: 1, baseAutoPower: 0,
+            clickPowerLevel: 0, autoClickerLevel: 0,
+            totalClicks: 0, gachaPulls: 0, mysticPullCount: 0,
+            rebirthCount: 0,
+            activeAnimalId: 1, equippedTitleId: null,
+            unlockedAnimals: [1], shinyAnimals: [], unlockedTitles: [], completedQuests: [],
+            artifactLvs: {},
+            expeditions: [null, null],
+            bossStage: 1,
+            lastSaveTime: Date.now(), lastAttendanceDate: ""
+        };
+
+        let currentQuestSub = "main";
+        let feverGauge = 0;
+        let isFever = false;
+        let isBossFighting = false;
+        let bossHp = 1000;
+        let bossMaxHp = 1000;
+        let bossTimeLeft = 30;
+        let bossTimerId = null;
+
+        // Helper 함수
+        function getActiveAnimal() { return ANIMALS.find(a => a.id === gameData.activeAnimalId) || ANIMALS[0]; }
+        function getEquippedTitle() { return TITLES.find(t => t.id === gameData.equippedTitleId); }
+        function hasRank(rank) { return gameData.unlockedAnimals.some(id => ANIMALS.find(a => a.id === id).rank === rank); }
+        function countRankUnlocked(rank) { return gameData.unlockedAnimals.filter(id => ANIMALS.find(a => a.id === id).rank === rank).length; }
+        function getQuestCount(cat) { return ALL_QUESTS[cat].filter(q => gameData.completedQuests.includes(q.id)).length; }
+        function getArtLv(artId) { return gameData.artifactLvs[artId] || 0; }
+
+        function getRebirthMultiplier() { return Math.pow(3, gameData.rebirthCount); }
+        function getTitleMultiplier() { const t = getEquippedTitle(); return t ? (1 + t.bonus) : 1; }
+        function getArtGoldMult() { return 1 + (getArtLv("art4") * 0.5); }
+
+        function getEffectiveCPC() {
+            const animal = getActiveAnimal();
+            let mult = RANKS[animal.rank].bonus * getTitleMultiplier() * getRebirthMultiplier() * getArtGoldMult();
+            if (gameData.shinyAnimals.includes(animal.id)) mult *= 3;
+            if (isFever) mult *= 10;
+            return gameData.baseClickPower * mult;
+        }
+
+        function getEffectiveCPS() {
+            const animal = getActiveAnimal();
+            let mult = RANKS[animal.rank].bonus * getTitleMultiplier() * getRebirthMultiplier() * getArtGoldMult();
+            if (gameData.shinyAnimals.includes(animal.id)) mult *= 3;
+            if (isFever) mult *= 10;
+            return gameData.baseAutoPower * mult;
+        }
+
+        function getRebirthCost() { return 1000000 * Math.pow(100, gameData.rebirthCount); }
+
+        // 로드 & 저장
+        function loadGame() {
+            const saved = localStorage.getItem("animalPerfectMasterSave");
+            if (saved) gameData = Object.assign(gameData, JSON.parse(saved));
+            
+            checkOfflineProgress();
+            checkAttendance();
+            checkAutoTitles();
+            updateUI();
+        }
+
+        function saveGame() {
+            gameData.lastSaveTime = Date.now();
+            localStorage.setItem("animalPerfectMasterSave", JSON.stringify(gameData));
+        }
+
+        // 오프라인 보상 & 출석 보상 (프로그램 1의 단점 완전 보완)
+        function checkOfflineProgress() {
+            const now = Date.now();
+            const elapsedSec = Math.floor((now - (gameData.lastSaveTime || now)) / 1000);
+            if (elapsedSec > 10) {
+                const cappedSec = Math.min(86400, elapsedSec); // 최대 24시간
+                const earned = Math.floor(cappedSec * getEffectiveCPS() * 0.5);
+                if (earned > 0) {
+                    gameData.gold += earned;
+                    gameData.totalGold += earned;
+                    showModal("💤 오프라인 방치 보상", `${Math.floor(cappedSec / 60)}분 동안 자리를 비운 사이 <b>${formatGold(earned)}</b>를 획득했습니다!`);
+                }
+            }
+        }
+
+        function checkAttendance() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (gameData.lastAttendanceDate !== todayStr) {
+                gameData.lastAttendanceDate = todayStr;
+                gameData.gems += 50;
+                gameData.gold += 10000;
+                showModal("📅 일일 출석 보상", "오늘의 출석 선물!<br>💎 <b>50 보석</b> 및 💰 <b>1만 G</b>가 지급되었습니다!");
+            }
+        }
+
+        function checkAutoTitles() {
+            TITLES.forEach(t => {
+                if (!gameData.unlockedTitles.includes(t.id) && t.check(gameData)) {
+                    gameData.unlockedTitles.push(t.id);
+                }
+            });
+        }
+
+        // 피버 시스템
+        function addFever(amount) {
+            if (isFever) return;
+            feverGauge = Math.min(100, feverGauge + amount);
+            if (feverGauge >= 100) {
+                isFever = true;
+                showModal("🔥 피버 타임 발동!", "10초 동안 모든 골드 수익이 <b>10배</b>로 폭증합니다!");
+            }
+            updateFeverUI();
+        }
+
+        function updateFeverUI() {
+            const fill = document.getElementById("feverBarFill");
+            const text = document.getElementById("feverText");
+            const card = document.getElementById("activeCard");
+
+            fill.style.width = `${feverGauge}%`;
+            if (isFever) {
+                text.innerText = "🔥 피버 타임 진행 중!! (10x)";
+                card.classList.add("fever-mode");
+            } else {
+                text.innerText = `🔥 피버 게이지 (${Math.floor(feverGauge)}%)`;
+                card.classList.remove("fever-mode");
+            }
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            checkAutoTitles();
+
+            const animal = getActiveAnimal();
+            const rankInfo = RANKS[animal.rank];
+            const title = getEquippedTitle();
+            const isShiny = gameData.shinyAnimals.includes(animal.id);
+
+            document.getElementById("activeBadge").innerText = rankInfo.name;
+            document.getElementById("activeBadge").style.background = rankInfo.color;
+            document.getElementById("activeShinyTag").style.display = isShiny ? "inline-block" : "none";
+            document.getElementById("activeName").innerText = animal.name;
+            document.getElementById("activeIcon").innerText = animal.icon;
+
+            const tBadge = document.getElementById("activeTitleBadge");
+            if (title) {
+                tBadge.style.display = "inline-block"; tBadge.innerText = `[${title.name}]`;
+            } else { tBadge.style.display = "none"; }
+
+            document.getElementById("goldDisplay").innerText = formatGold(gameData.gold);
+            document.getElementById("gemDisplay").innerText = gameData.gems.toLocaleString();
+            document.getElementById("cpcDisplay").innerText = formatGold(getEffectiveCPC());
+            document.getElementById("cpsDisplay").innerText = formatGold(getEffectiveCPS());
+
+            document.getElementById("rebirthCountDisplay").innerText = `${gameData.rebirthCount}회`;
+            document.getElementById("collectionDisplay").innerText = `${gameData.unlockedAnimals.length}/100`;
+            document.getElementById("titleCountDisplay").innerText = `${gameData.unlockedTitles.length}/70`;
+
+            // 상점 버튼
+            const costClick = Math.floor(10 * Math.pow(1.15, gameData.clickPowerLevel));
+            const costAuto = Math.floor(50 * Math.pow(1.15, gameData.autoClickerLevel));
+            document.getElementById("btnClickPower").innerText = formatGold(costClick);
+            document.getElementById("btnAutoClicker").innerText = formatGold(costAuto);
+            document.getElementById("btnClickPower").disabled = gameData.gold < costClick;
+            document.getElementById("btnAutoClicker").disabled = gameData.gold < costAuto;
+
+            // 가챠 정보
+            const discount = getArtLv("art1") * 0.05;
+            const costGacha1 = Math.floor(100 * (1 - discount));
+            const costGacha10 = Math.floor(1000 * (1 - discount));
+
+            document.getElementById("btnGacha1").innerText = `1회 (${formatGold(costGacha1)})`;
+            document.getElementById("btnGacha10").innerText = `10회 (${formatGold(costGacha10)})`;
+            document.getElementById("btnGacha1").disabled = gameData.gold < costGacha1;
+            document.getElementById("btnGacha10").disabled = gameData.gold < costGacha10;
+
+            const highestRankObj = Object.keys(RANKS).filter(r => RANKS[r].minRebirth <= gameData.rebirthCount).pop();
+            const shinyRate = (5 + getArtLv("art2") * 2);
+            document.getElementById("gachaUnlockStatus").innerText = `소환 가능 최고 등급: [${highestRankObj}] | ✨ 샤이니 확률: ${shinyRate}%`;
+
+            // 퀘스트 탭
+            document.getElementById("qSubMain").innerText = `중요 (${getQuestCount("main")}/30)`;
+            document.getElementById("qSubLegend").innerText = `전설 (${getQuestCount("legend")}/30)`;
+            document.getElementById("qSubMyth").innerText = `신화 (${getQuestCount("myth")}/30)`;
+
+            renderExtraClickButtons();
+            renderArtifacts();
+            renderExpeditions();
+            renderFusionUI();
+            renderRebirthTab();
+            renderQuests();
+            renderTitles();
+            renderBook();
+            renderBossUI();
+        }
+
+        // 터치 클릭 액션
+        document.getElementById("clickArea").addEventListener("click", (e) => {
+            let cpc = getEffectiveCPC();
+
+            // 크리티컬 돋보기 유물 적용
+            const critRate = getArtLv("art3") * 0.05;
+            let isCrit = false;
+            if (Math.random() < critRate) {
+                cpc *= 10;
+                isCrit = true;
+            }
+
+            gameData.gold += cpc;
+            gameData.totalGold += cpc;
+            gameData.totalClicks += 1;
+            addFever(2);
+
+            const text = document.createElement("div");
+            text.className = `floating-text ${isCrit ? 'crit' : ''}`;
+            text.innerText = `${isCrit ? '💥CRITICAL! ' : ''}+${formatGold(cpc)}`;
+            const rect = e.currentTarget.getBoundingClientRect();
+            text.style.left = `${e.clientX - rect.left}px`;
+            text.style.top = `${e.clientY - rect.top}px`;
+            e.currentTarget.appendChild(text);
+            setTimeout(() => text.remove(), 700);
+
+            if (isBossFighting) {
+                const bossDmg = cpc * (1 + getArtLv("art5"));
+                bossHp = Math.max(0, bossHp - bossDmg);
+                if (bossHp <= 0) winBossBattle();
+            }
+
+            updateUI(); saveGame();
+        });
+
+        // 서브 클릭 버튼
+        function renderExtraClickButtons() {
+            const panel = document.getElementById("extraButtonsPanel");
+            panel.innerHTML = "";
+
+            EXTRA_CLICK_BUTTONS.forEach(btn => {
+                const isUnlocked = gameData.rebirthCount >= btn.reqRebirth;
+                const b = document.createElement("button");
+                b.className = `sub-click-btn ${isUnlocked ? '' : 'locked'}`;
+
+                if (isUnlocked) {
+                    b.innerHTML = `${btn.name}<br><span style="color:#2563eb; font-size:9px;">(x${btn.mult} 배율)</span>`;
+                    b.onclick = (e) => handleExtraClick(e, btn.mult);
+                } else {
+                    b.innerHTML = `🔒 잠김<br><span style="font-size:9px;">(환생 ${btn.reqRebirth}회 필요)</span>`;
+                }
+                panel.appendChild(b);
+            });
+        }
+
+        function handleExtraClick(e, mult) {
+            const addedGold = getEffectiveCPC() * mult;
+            gameData.gold += addedGold;
+            gameData.totalGold += addedGold;
+            gameData.totalClicks += 1;
+            addFever(3);
+
+            const text = document.createElement("div");
+            text.className = "floating-text";
+            text.innerText = `+${formatGold(addedGold)}`;
+            const rect = e.currentTarget.getBoundingClientRect();
+            text.style.left = `${e.clientX - rect.left + 10}px`;
+            text.style.top = `${e.clientY - rect.top - 10}px`;
+            e.currentTarget.appendChild(text);
+            setTimeout(() => text.remove(), 700);
+
+            if (isBossFighting) {
+                const bossDmg = addedGold * (1 + getArtLv("art5"));
+                bossHp = Math.max(0, bossHp - bossDmg);
+                if (bossHp <= 0) winBossBattle();
+            }
+
+            updateUI(); saveGame();
+        }
+
+        // 상점 구매
+        function buyClickPower() {
+            const cost = Math.floor(10 * Math.pow(1.15, gameData.clickPowerLevel));
+            if (gameData.gold >= cost) {
+                gameData.gold -= cost; gameData.baseClickPower += 1; gameData.clickPowerLevel += 1;
+                updateUI(); saveGame();
+            }
+        }
+
+        function buyAutoClicker() {
+            const cost = Math.floor(50 * Math.pow(1.15, gameData.autoClickerLevel));
+            if (gameData.gold >= cost) {
+                gameData.gold -= cost; gameData.baseAutoPower += 1; gameData.autoClickerLevel += 1;
+                updateUI(); saveGame();
+            }
+        }
+
+        // ⚔️ 보스전 로직
+        function renderBossUI() {
+            document.getElementById("bossName").innerText = `👹 보스 몬스터 Stage ${gameData.bossStage}`;
+            document.getElementById("bossHpText").innerText = `HP: ${formatGold(bossHp)} / ${formatGold(bossMaxHp)}`;
+            document.getElementById("bossHpFill").style.width = `${(bossHp / bossMaxHp) * 100}%`;
+            document.getElementById("bossTimerText").innerText = `⏳ 남은 시간: ${bossTimeLeft}초`;
+
+            const btn = document.getElementById("btnBossAction");
+            btn.innerText = isBossFighting ? "⚔️ 보스 연타 공격!!" : "⚔️ 보스 도전하기";
+        }
+
+        function handleBossAction() {
+            if (!isBossFighting) {
+                isBossFighting = true;
+                bossMaxHp = Math.floor(1000 * Math.pow(2.2, gameData.bossStage - 1));
+                bossHp = bossMaxHp;
+                bossTimeLeft = 30;
+
+                bossTimerId = setInterval(() => {
+                    bossTimeLeft--;
+                    if (bossTimeLeft <= 0) {
+                        clearInterval(bossTimerId);
+                        isBossFighting = false;
+                        showModal("☠️ 보스전 실패", "제한시간 내에 보스를 처치하지 못했습니다.");
+                        updateUI();
+                    } else {
+                        renderBossUI();
+                    }
+                }, 1000);
+            }
+            renderBossUI();
+        }
+
+        function winBossBattle() {
+            clearInterval(bossTimerId);
+            isBossFighting = false;
+            const rewardGems = gameData.bossStage * 20;
+            const rewardGold = bossMaxHp * 2;
+
+            gameData.gems += rewardGems;
+            gameData.gold += rewardGold;
+            gameData.totalGold += rewardGold;
+            gameData.bossStage += 1;
+
+            showModal("🎉 보스 처치 성공!", `보스를 쓰러뜨렸습니다!<br>보상: 💎 <b>${rewardGems} 보석</b>, 💰 <b>${formatGold(rewardGold)}</b>`);
+            updateUI(); saveGame();
+        }
+
+        // 💎 유물 로직
+        function renderArtifacts() {
+            const list = document.getElementById("artifactList");
+            list.innerHTML = "";
+            ARTIFACTS.forEach(art => {
+                const curLv = getArtLv(art.id);
+                const cost = art.baseCost * (curLv + 1);
+                const isMax = curLv >= art.maxLv;
+
+                const div = document.createElement("div");
+                div.className = "card-item";
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:700; font-size:12px;">${art.name} (Lv.${curLv}/${art.maxLv})</div>
+                        <div style="font-size:10px; color:#64748b;">${art.desc}</div>
+                    </div>
+                    <button class="action-btn" style="background:#7c3aed;" ${isMax || gameData.gems < cost ? 'disabled' : ''} onclick="buyArtifact('${art.id}', ${cost})">
+                        ${isMax ? 'MAX' : `💎 ${cost}`}
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function buyArtifact(artId, cost) {
+            if (gameData.gems >= cost) {
+                gameData.gems -= cost;
+                gameData.artifactLvs[artId] = getArtLv(artId) + 1;
+                updateUI(); saveGame();
+            }
+        }
+
+        // 🗺️ 원정대 로직
+        function renderExpeditions() {
+            const container = document.getElementById("expeditionSlotList");
+            container.innerHTML = "";
+
+            for (let i = 0; i < 2; i++) {
+                const exp = gameData.expeditions[i];
+                const div = document.createElement("div");
+                div.className = "card-item";
+
+                if (!exp) {
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight:700; font-size:12px;">원정 슬롯 #${i + 1}</div>
+                            <div style="font-size:10px; color:#64748b;">동물이 탐험을 기다리고 있습니다.</div>
+                        </div>
+                        <button class="action-btn" onclick="startExpedition(${i})">탐험 보내기 (5분)</button>
+                    `;
+                } else {
+                    const remain = Math.max(0, Math.floor((exp.endTime - Date.now()) / 1000));
+                    const isDone = remain <= 0;
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight:700; font-size:12px;">원정 슬롯 #${i + 1} [진행중]</div>
+                            <div style="font-size:10px; color:#64748b;">${isDone ? '탐험 완료!' : `남은 시간: ${remain}초`}</div>
+                        </div>
+                        <button class="action-btn" style="background:#16a34a;" ${isDone ? '' : 'disabled'} onclick="claimExpedition(${i})">
+                            ${isDone ? '보상 수령' : '탐험 중'}
+                        </button>
+                    `;
+                }
+                container.appendChild(div);
+            }
+        }
+
+        function startExpedition(slotIdx) {
+            gameData.expeditions[slotIdx] = {
+                endTime: Date.now() + (5 * 60 * 1000),
+                rewardGems: 15,
+                rewardGold: getEffectiveCPC() * 100
+            };
+            updateUI(); saveGame();
+        }
+
+        function claimExpedition(slotIdx) {
+            const exp = gameData.expeditions[slotIdx];
+            if (exp && Date.now() >= exp.endTime) {
+                gameData.gems += exp.rewardGems;
+                gameData.gold += exp.rewardGold;
+                gameData.totalGold += exp.rewardGold;
+                gameData.expeditions[slotIdx] = null;
+                showModal("🎁 원정 완료!", `탐험에서 보물을 찾아왔습니다!<br>보상: 💎 <b>${exp.rewardGems} 보석</b>, 💰 <b>${formatGold(exp.rewardGold)}</b>`);
+                updateUI(); saveGame();
+            }
+        }
+
+        // 가챠 및 합성
+        function drawGacha(count) {
+            const discount = getArtLv("art1") * 0.05;
+            const cost = Math.floor(count * 100 * (1 - discount));
+            if (gameData.gold < cost) return;
+
+            gameData.gold -= cost;
+            gameData.gachaPulls += count;
+
+            const shinyRate = 0.05 + (getArtLv("art2") * 0.02);
+            const results = [];
+
+            for (let i = 0; i < count; i++) {
+                const animal = rollRandomAnimal();
+                if (animal.rank === "미스틱") gameData.mysticPullCount += 1;
+
+                const isShiny = Math.random() < shinyRate;
+                const isNew = !gameData.unlockedAnimals.includes(animal.id);
+
+                if (isNew) gameData.unlockedAnimals.push(animal.id);
+                if (isShiny && !gameData.shinyAnimals.includes(animal.id)) gameData.shinyAnimals.push(animal.id);
+
+                results.push({ animal, isShiny, isNew });
+            }
+
+            let bodyHtml = results.map(r => `
+                <div style="margin: 4px 0;">
+                    ${r.isNew ? '<span style="background:#ef4444; color:white; font-size:8px; padding:1px 3px; border-radius:3px; font-weight:800;">NEW</span> ' : ''}
+                    ${r.isShiny ? '✨' : ''}<b>[${r.animal.rank}]</b> ${r.animal.name} ${r.animal.icon}
+                </div>
+            `).join("");
+
+            showModal("🎉 소환 결과", bodyHtml);
+            updateUI(); saveGame();
+        }
+
+        function rollRandomAnimal() {
+            const availableRanks = Object.keys(RANKS).filter(r => RANKS[r].minRebirth <= gameData.rebirthCount);
+            let totalChance = 0;
+            availableRanks.forEach(r => totalChance += RANKS[r].chance);
+
+            const rand = Math.random() * totalChance;
+            let cumulative = 0;
+
+            for (const key of availableRanks) {
+                cumulative += RANKS[key].chance;
+                if (rand <= cumulative) {
+                    const list = ANIMALS.filter(a => a.rank === key);
+                    return list[Math.floor(Math.random() * list.length)];
+                }
+            }
+            return ANIMALS[0];
+        }
+
+        function renderFusionUI() {
+            const container = document.getElementById("fusionButtons");
+            container.innerHTML = "";
+
+            for (let i = 0; i < RANK_ORDER.length - 1; i++) {
+                const rank = RANK_ORDER[i];
+                const owned = gameData.unlockedAnimals.filter(id => ANIMALS.find(a => a.id === id).rank === rank);
+
+                const btn = document.createElement("button");
+                btn.className = "action-btn";
+                btn.style.fontSize = "10px";
+                btn.style.padding = "4px 8px";
+                btn.innerText = `${rank} (${owned.length}/3)`;
+                btn.disabled = owned.length < 3;
+                btn.onclick = () => doFusion(rank);
+                container.appendChild(btn);
+            }
+        }
+
+        function doFusion(rank) {
+            const owned = gameData.unlockedAnimals.filter(id => ANIMALS.find(a => a.id === id).rank === rank);
+            if (owned.length >= 3) {
+                gameData.unlockedAnimals = gameData.unlockedAnimals.filter(id => !owned.slice(0, 3).includes(id));
+                const nextRank = RANK_ORDER[RANK_ORDER.indexOf(rank) + 1];
+                const nextList = ANIMALS.filter(a => a.rank === nextRank);
+                const rewardAnimal = nextList[Math.floor(Math.random() * nextList.length)];
+
+                if (!gameData.unlockedAnimals.includes(rewardAnimal.id)) {
+                    gameData.unlockedAnimals.push(rewardAnimal.id);
+                }
+                showModal("🧬 합성 성공!", `동물 3마리를 바쳐 <b>[${nextRank}] ${rewardAnimal.name} ${rewardAnimal.icon}</b>를 연성했습니다!`);
+                updateUI(); saveGame();
+            }
+        }
+
+        // 환생
+        function renderRebirthTab() {
+            const cost = getRebirthCost();
+            const list = document.getElementById("rebirthInfoList");
+            const btn = document.getElementById("btnDoRebirth");
+
+            const curMult = getRebirthMultiplier();
+            const nextMult = Math.pow(3, gameData.rebirthCount + 1);
+
+            list.innerHTML = `
+                • 현재 환생 횟수: <b>${gameData.rebirthCount}회</b><br>
+                • 현재 전역 수익 배율: <b style="color:#ea580c;">x${curMult}</b> ➔ 환생 후: <b style="color:#2563eb;">x${nextMult}</b><br>
+                • 현재 해금된 서브 수익 버튼: <b>${Math.min(4, gameData.rebirthCount)} / 4 개</b><br>
+                • 환생 필요 금액: <b style="color:#dc2626;">${formatGold(cost)}</b>
+            `;
+
+            btn.innerText = `환생 진행하기 (비용: ${formatGold(cost)})`;
+            btn.disabled = gameData.gold < cost;
+        }
+
+        function doRebirth() {
+            const cost = getRebirthCost();
+            if (gameData.gold >= cost) {
+                if (confirm(`정말로 환생하시겠습니까?\n골드와 기본 단련 단계는 초기화되지만 수익 배율이 x3배 상승하고 새 버튼/가챠가 해금됩니다.`)) {
+                    gameData.gold = 0;
+                    gameData.baseClickPower = 1;
+                    gameData.baseAutoPower = 0;
+                    gameData.clickPowerLevel = 0;
+                    gameData.autoClickerLevel = 0;
+                    gameData.rebirthCount += 1;
+
+                    alert(`🎉 환생 성공! 환생 횟수가 ${gameData.rebirthCount}회가 되었습니다!`);
+                    updateUI(); saveGame();
+                }
+            }
+        }
+
+        // 퀘스트
+        function switchQuestSub(sub) {
+            currentQuestSub = sub;
+            document.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
+            if (sub === 'main') document.getElementById("qSubMain").classList.add("active");
+            if (sub === 'legend') document.getElementById("qSubLegend").classList.add("active");
+            if (sub === 'myth') document.getElementById("qSubMyth").classList.add("active");
+            renderQuests();
+        }
+
+        function renderQuests() {
+            const container = document.getElementById("questList");
+            container.innerHTML = "";
+            const list = ALL_QUESTS[currentQuestSub];
+
+            list.forEach(q => {
+                const isDone = gameData.completedQuests.includes(q.id);
+                const canClaim = !isDone && q.check(gameData);
+
+                const item = document.createElement("div");
+                item.className = "card-item";
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight:800; font-size:11px; color:#1e293b;">${q.title}</div>
+                        <div style="font-size:10px; color:#64748b;">${q.desc}</div>
+                        <div style="font-size:10px; color:#2563eb; font-weight:700;">보상: +${formatGold(q.rewardGold)}</div>
+                    </div>
+                    <button class="action-btn" ${canClaim ? '' : 'disabled'} onclick="claimQuest('${q.id}', ${q.rewardGold})">
+                        ${isDone ? '완료됨' : (canClaim ? '보상 수령' : '진행중')}
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function claimQuest(qId, reward) {
+            if (!gameData.completedQuests.includes(qId)) {
+                gameData.completedQuests.push(qId);
+                gameData.gold += reward;
+                gameData.totalGold += reward;
+                updateUI(); saveGame();
+            }
+        }
+
+        // 칭호
+        function renderTitles() {
+            const container = document.getElementById("titleList");
+            container.innerHTML = "";
+
+            TITLES.forEach(t => {
+                const isUnlocked = gameData.unlockedTitles.includes(t.id);
+                const isEquipped = gameData.equippedTitleId === t.id;
+
+                const card = document.createElement("div");
+                card.className = `title-card ${isEquipped ? 'equipped' : ''} ${isUnlocked ? '' : 'locked'}`;
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight:800; font-size:11px; color:#1e293b;">[${t.name}]</div>
+                        <div style="font-size:10px; color:#2563eb; font-weight:700;">수익 보너스 +${Math.round(t.bonus * 100)}%</div>
+                        <div style="font-size:10px; color:#64748b;">${t.desc}</div>
+                    </div>
+                    <div>
+                        ${isUnlocked ? `
+                            <button class="action-btn" onclick="equipTitle('${t.id}')">
+                                ${isEquipped ? '해제' : '장착'}
+                            </button>
+                        ` : '<span style="font-size:10px; color:#94a3b8; font-weight:700;">미획득</span>'}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function equipTitle(tId) {
+            gameData.equippedTitleId = (gameData.equippedTitleId === tId) ? null : tId;
+            updateUI(); saveGame();
+        }
+
+        // 도감
+        function renderBook() {
+            const grid = document.getElementById("bookGrid");
+            grid.innerHTML = "";
+
+            ANIMALS.forEach(a => {
+                const isUnlocked = gameData.unlockedAnimals.includes(a.id);
+                const isEquipped = gameData.activeAnimalId === a.id;
+                const isShiny = gameData.shinyAnimals.includes(a.id);
+
+                const item = document.createElement("div");
+                item.className = `book-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}`;
+                if (isUnlocked) item.onclick = () => { gameData.activeAnimalId = a.id; updateUI(); saveGame(); };
+
+                item.innerHTML = `
+                    <div style="font-size:26px;">${isUnlocked ? a.icon : '❓'}</div>
+                    <div style="font-size:10px; font-weight:700;">${isUnlocked ? a.name : '???'} ${isShiny ? '✨' : ''}</div>
+                    <div style="font-size:9px; color:${isUnlocked ? RANKS[a.rank].color : '#94a3b8'}; font-weight:700;">
+                        ${isUnlocked ? a.rank : '미해금'}
+                    </div>
+                `;
+                grid.appendChild(item);
+            });
+        }
+
+        // 탭 및 모달
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            const tabMap = { shop: 0, boss: 1, artifact: 2, expedition: 3, gacha: 4, rebirth: 5, quest: 6, title: 7, book: 8 };
+            document.querySelectorAll('.tab-btn')[tabMap[tab]].classList.add('active');
+            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        }
+
+        function showModal(title, bodyHtml) {
+            document.getElementById("modalTitle").innerHTML = title;
+            document.getElementById("modalBody").innerHTML = bodyHtml;
+            document.getElementById("gameModal").classList.add("active");
+        }
+        function closeModal() { document.getElementById("gameModal").classList.remove("active"); }
+
+        function resetGame() {
+            if (confirm("모든 데이터(유물, 보스, 동물, 환생)를 초기화하시겠습니까?")) {
+                localStorage.removeItem("animalPerfectMasterSave");
+                location.reload();
+            }
+        }
+
+        // 초당 자동 수익 및 피버 감소
+        setInterval(() => {
+            const cps = getEffectiveCPS();
+            if (cps > 0) {
+                gameData.gold += cps;
+                gameData.totalGold += cps;
+            }
+            if (isFever) {
+                feverGauge -= 10;
+                if (feverGauge <= 0) { feverGauge = 0; isFever = false; }
+                updateFeverUI();
+            }
+            updateUI(); saveGame();
+        }, 1000);
+
+        loadGame();
+    </script>
+</body>
+</html>
